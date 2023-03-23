@@ -1,0 +1,14 @@
+package ru.VYurkin.TestFromEffectiveMobile.dto.PurchasesDTO;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class HistoryPurchasesDTO {
+    List<PurchasesDTO> historyPurchases;
+}
