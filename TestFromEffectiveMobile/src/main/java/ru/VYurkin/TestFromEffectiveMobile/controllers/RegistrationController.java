@@ -1,11 +1,9 @@
 package ru.VYurkin.TestFromEffectiveMobile.controllers;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +12,8 @@ import ru.VYurkin.TestFromEffectiveMobile.dto.UserDTO.AuthenticationDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.UserDTO.UserDTO;
 import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.security.JWTUtil;
-import ru.VYurkin.TestFromEffectiveMobile.services.UserService;
+import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
+import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
 
 import java.util.Map;
 
@@ -23,24 +22,23 @@ import java.util.Map;
 public class RegistrationController {
 
     private final UserService userService;
-    private final ModelMapper modelMapper;
+    private final Converter converter;
 
     private final JWTUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
-    private final PasswordEncoder passwordEncoder;
+
     @Autowired
-    public RegistrationController(UserService userService, ModelMapper modelMapper, JWTUtil jwtUtil, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder) {
+    public RegistrationController(UserService userService, Converter converter, JWTUtil jwtUtil, AuthenticationManager authenticationManager) {
         this.userService = userService;
-        this.modelMapper = modelMapper;
+        this.converter = converter;
         this.jwtUtil = jwtUtil;
         this.authenticationManager = authenticationManager;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/registration")
     public Map<String, String> registration(@RequestBody UserDTO userDTO){
-        User user = convertToUser(userDTO);
-        userService.registration(convertToUser(userDTO));
+        User user = converter.convertToUser(userDTO);
+        userService.registration(converter.convertToUser(userDTO));
         String token = jwtUtil.generateToken(user.getUsername());
         return Map.of("jwt-token", token);
     }
@@ -59,7 +57,4 @@ public class RegistrationController {
         return Map.of("jvt-token", token);
     }
 
-    private User convertToUser(UserDTO userDTO){
-        return modelMapper.map(userDTO, User.class);
-    }
 }

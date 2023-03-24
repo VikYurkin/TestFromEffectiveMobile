@@ -12,24 +12,26 @@ import ru.VYurkin.TestFromEffectiveMobile.dto.TagDTO;
 import ru.VYurkin.TestFromEffectiveMobile.models.Organisation;
 import ru.VYurkin.TestFromEffectiveMobile.models.product.*;
 import ru.VYurkin.TestFromEffectiveMobile.repositories.*;
+import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.OrganisationService;
+import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 
 import java.util.List;
 import java.util.Optional;
 
 
 @Service
-public class ProductService {
+public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
-    private final OrganisationService organisationService;
+    private final OrganisationRepository organisationRepository;
     private final InfoSaleRepository infoSaleRepository;
     private final ReviewRepository reviewRepository;
     private final TagRepository tagRepository;
     private final TableProductRepository tableProductRepository;
     private final RatingRepository ratingRepository;
     @Autowired
-    public ProductService(ProductRepository productRepository, OrganisationService organisationService, InfoSaleRepository infoSaleRepository, ReviewRepository reviewRepository, TagRepository tagRepository, TableProductRepository tableProductRepository, RatingRepository ratingRepository) {
+    public ProductServiceImpl(ProductRepository productRepository, OrganisationRepository organisationRepository, InfoSaleRepository infoSaleRepository, ReviewRepository reviewRepository, TagRepository tagRepository, TableProductRepository tableProductRepository, RatingRepository ratingRepository) {
         this.productRepository = productRepository;
-        this.organisationService = organisationService;
+        this.organisationRepository = organisationRepository;
         this.infoSaleRepository = infoSaleRepository;
         this.reviewRepository = reviewRepository;
         this.tagRepository = tagRepository;
@@ -64,12 +66,12 @@ public class ProductService {
         product.setDescription(productForAdminDTO.getDescription());
         product.setIsActive(productForAdminDTO.getIsActive());
         product.setIsDelete(productForAdminDTO.getIsDelete());
-        Optional<Organisation> organisation=organisationService.findByName(productForAdminDTO.getOrganisation().getName());
+        Optional<Organisation> organisation=organisationRepository.findByName(productForAdminDTO.getOrganisation().getName());
         if(organisation.isPresent()){
         Organisation oldOrganisation =product.getOrganisation();
         if(oldOrganisation.getOrganisationId()==organisation.get().getOrganisationId()){
             oldOrganisation.getProducts().remove(product);
-            organisationService.save(oldOrganisation);
+            organisationRepository.save(oldOrganisation);
         }
         product.setOrganisation(organisation.get());
         }
@@ -188,7 +190,4 @@ public class ProductService {
         productRepository.save(product);
         return Optional.of(product);
     }
-
-
-
 }

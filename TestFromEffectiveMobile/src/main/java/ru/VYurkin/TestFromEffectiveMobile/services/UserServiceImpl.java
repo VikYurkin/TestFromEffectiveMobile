@@ -4,7 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.VYurkin.TestFromEffectiveMobile.dto.ProductDTO.ProductDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.PurchasesDTO.PurchaseDTO;
+import ru.VYurkin.TestFromEffectiveMobile.dto.RatingDTO.RatingDTO;
+import ru.VYurkin.TestFromEffectiveMobile.dto.RatingDTO.RatingWithDoubleDTO;
+import ru.VYurkin.TestFromEffectiveMobile.dto.ReviewDTO.ReviewDTO;
 import ru.VYurkin.TestFromEffectiveMobile.models.product.Product;
 import ru.VYurkin.TestFromEffectiveMobile.models.product.Rating;
 import ru.VYurkin.TestFromEffectiveMobile.models.product.Review;
@@ -13,11 +17,13 @@ import ru.VYurkin.TestFromEffectiveMobile.models.user.Purchases;
 import ru.VYurkin.TestFromEffectiveMobile.models.user.Role;
 import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.repositories.*;
+import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
+import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
 
 import java.util.*;
 
 @Service
-public class UserService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
@@ -29,13 +35,9 @@ public class UserService {
     private final RatingRepository ratingRepository;
     private final PasswordEncoder passwordEncoder;
     private final ProductService productService;
-
-    private User userExist;
-
-    private Product productExist;
     private static float COMMISSION = 0.05f;
 @Autowired
-    public UserService(ProductRepository productRepository, UserRepository userRepository, PurchasesRepository purchasesRepository, DatesPurchasesRepository datesPurchasesRepository, ReviewRepository reviewRepository, RatingRepository ratingRepository, PasswordEncoder passwordEncoder, ProductService productService) {
+    public UserServiceImpl(ProductRepository productRepository, UserRepository userRepository, PurchasesRepository purchasesRepository, DatesPurchasesRepository datesPurchasesRepository, ReviewRepository reviewRepository, RatingRepository ratingRepository, PasswordEncoder passwordEncoder, ProductService productService) {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.purchasesRepository = purchasesRepository;
@@ -59,78 +61,87 @@ public class UserService {
         return user;
     }
 
-    @Transactional
-    public Date buyProduct(Long userId, Long productId){
+    public PurchaseDTO buyProduct(User user, ProductDTO productDTO){
+        Product product = productService.findProductIsActive(productDTO);
+        PurchaseDTO purchaseDTO = null;
         Date date = null;
-        if(userAndProductOrNot(userId, productId))
+        if(userAndProductOrNot(user, product))
             return null;
 
-        float balance = userExist.getBalance();
-        float coast = productExist.getCoast();
-        int countOfShop = productExist.getCount();
-        int countOfUser;
+        float balance = user.getBalance();
+        float coast = product.getCoast();
+        int countOfShop = product.getCount();
 
-        if((balance<productExist.getCoast())|(countOfShop<0))
+        if((balance<product.getCoast())|(countOfShop<0))
             return null;
-        Purchases purchases =purchasesRepository.findByUserAndProduct(userExist, productExist);
+        Purchases purchases =purchasesRepository.findByUserAndProduct(user, product);
         date=new Date();
         if(purchases==null){
-            Purchases newPurchases = new Purchases(productExist, userExist, 1);
-                List<DatesPurchases> listDate = new  ArrayList<>();
-                listDate.add(new DatesPurchases(newPurchases, date));
-                newPurchases.setDates(listDate);
-                purchasesRepository.save(newPurchases);
-            }else{
+            Purchases newPurchases = new Purchases(product, user, 1);
+            List<DatesPurchases> listDate = new  ArrayList<>();
+            listDate.add(new DatesPurchases(newPurchases, date));
+            newPurchases.setDates(listDate);
+            purchasesRepository.save(newPurchases);
+        }else{
             datesPurchasesRepository.save(new DatesPurchases(purchases, date));
-                purchases.setCount(purchases.getCount()+1);
-            }
-            productExist.setCount(countOfShop-1);
-            userExist.setBalance(balance-coast);
-            return date;
+            purchases.setCount(purchases.getCount()+1);
+        }
+        product.setCount(countOfShop-1);
+        user.setBalance(balance-coast);
+
+        if(date!=null){
+            purchaseDTO = new PurchaseDTO(productDTO, date);
+            getMoney(product);
+        }
+       return purchaseDTO;
     }
 
-    public String setReview(Long userId, Long productId, String text) {
 
-        if(userAndProductOrNot(userId, productId))
+    public ReviewDTO setReview(User user, ReviewDTO reviewDTO) {
+        Product product = productService.findProductIsActive(reviewDTO.getProduct());
+        String text = reviewDTO.getReview();
+        if(userAndProductOrNot(user, product))
             return null;
 
-        Purchases purchases = purchasesRepository.findByUserAndProduct(userExist, productExist);
+        Purchases purchases = purchasesRepository.findByUserAndProduct(user, product);
 
         if(purchases==null)
             return null;
 
-        reviewRepository.save(new Review(productExist, userId, text));
-            return text;
-
+        reviewRepository.save(new Review(product, user.getUserId(), text));
+        return new ReviewDTO(reviewDTO.getProduct(), text);
     }
-    @Transactional
-    public Double setRating(Long userId, Long productId, int rating){
-        if(userAndProductOrNot(userId, productId) |rating<0|rating>5)
+    public RatingWithDoubleDTO setRating(User user, RatingDTO ratingDTO){
+        Product product = productService.findProductIsActive(ratingDTO.getProduct());
+        int rating = ratingDTO.getRating();
+        if(userAndProductOrNot(user, product) |rating<0|rating>5)
             return null;
-
-        Purchases purchases = purchasesRepository.findByUserAndProduct(userExist, productExist);
+        Purchases purchases = purchasesRepository.findByUserAndProduct(user, product);
 
         if (purchases == null)
             return null;
 
-        Optional<Rating> newRating=productExist.getRating().stream().filter(ratings -> ratings.getUserId()==userId).findAny();
+        Optional<Rating> newRating=product.getRating().stream().filter
+                (ratings -> ratings.getUserId()==user.getUserId()).findAny();
             if(newRating.isPresent())
                 newRating.get().setRating(rating);
             else
-                ratingRepository.save(new Rating(productExist, rating, userId));
+                ratingRepository.save(new Rating(product, rating, user.getUserId()));
 
             Double doubleRating;
-            doubleRating=productExist.getRating().stream()
+            doubleRating=product.getRating().stream()
                     .mapToInt(Rating::getRating).average().getAsDouble();
-            return doubleRating;
+        if(doubleRating != null)
+            return new RatingWithDoubleDTO(ratingDTO.getProduct(), doubleRating);
+        return null;
         }
-        @Transactional
+
         public boolean returnProduct(PurchaseDTO purchaseDTO, User user){
             Product product = productService.findProductIsActive(purchaseDTO.getProduct());
-            if(userAndProductOrNot(user.getUserId(), product.getProductId()))
+            if(userAndProductOrNot(user, product))
                 return false;
 
-            Purchases purchases =purchasesRepository.findByUserAndProduct(userExist, productExist);
+            Purchases purchases =purchasesRepository.findByUserAndProduct(user, product);
 
             if(purchases==null)
                 return false;
@@ -172,13 +183,9 @@ public class UserService {
         salesman.setBalance(salesman.getBalance()+product.getCoast()*(1-COMMISSION));
         save(salesman);
     }
-    private boolean userAndProductOrNot(Long userId, Long productId){
-        Optional<User> userOrNot=userRepository.findById(userId);
-        Optional<Product> productOrNot=productRepository.findById(productId);
-        if(userOrNot.isPresent()&productOrNot.isPresent()){
-            userExist =userOrNot.get();
-            productExist=productOrNot.get();
-        }
+    private boolean userAndProductOrNot(User user, Product product){
+        Optional<User> userOrNot=userRepository.findById(user.getUserId());
+        Optional<Product> productOrNot=productRepository.findById(product.getProductId());
         return (!(userOrNot.isPresent() & productOrNot.isPresent()));
     }
 }
