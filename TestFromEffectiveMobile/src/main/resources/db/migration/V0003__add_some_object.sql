@@ -1,14 +1,14 @@
 insert into users(username, email, password, balance, is_active, is_delete)
-VALUES ('user1', 'user1@mail.ru','',1000, true, false);
+VALUES ('user1', 'user1@mail.ru','$2a$10$L3zhBcPNSa/FyBgTRUgPDOKGea58RhpVz7RlAQTOpDBP5lHYnZK8e',1000, true, false);
 
 insert into users(username, email, password, balance, is_active, is_delete)
-VALUES ('user2', 'user2@mail.ru','',1000, true, false);
+VALUES ('user2', 'user2@mail.ru','$2a$10$wttosIL6eU8oqmx5Z9a45OsQh.EabB/NerXJVA7vTPItCBhnhBC0m',1000, true, false);
 
 insert into user_role(role_id, role) VALUES (1, 'ADMIN');
 insert into user_role(role_id, role) VALUES (2, 'USER');
 
-insert into organisation(user_id, name, description, logo) values (1, 'VictorOrg', 'NewViktorOrg', 'logo');
-insert into organisation(user_id, name, description, logo) values (2, 'UserOrg', 'NewUserOrg', 'logo');
+insert into organisation(user_id, name, description, logo, is_active, is_delete) values (1, 'VictorOrg', 'NewViktorOrg', 'logo', true, false);
+insert into organisation(user_id, name, description, logo, is_active, is_delete) values (2, 'UserOrg', 'NewUserOrg', 'logo', true, false);
 
 insert into info_sale(sale, time) values (5, 1);
 insert into info_sale(sale, time) values (10, 1);

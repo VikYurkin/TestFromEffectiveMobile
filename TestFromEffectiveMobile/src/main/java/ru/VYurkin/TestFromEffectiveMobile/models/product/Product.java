@@ -1,6 +1,8 @@
 package ru.VYurkin.TestFromEffectiveMobile.models.product;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import ru.VYurkin.TestFromEffectiveMobile.dto.InfoSaleDTO.InfoSaleDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.InfoSaleDTO.InfoSaleForAdminDTO;
@@ -22,19 +24,24 @@ public class Product {
    @Column(name = "product_id")
    private long productId;
 
+   @NotNull(message = "не должно быть пустым")
    @Column(name = "product_name")
    private String productName;
 
+   @NotNull(message = "не должно быть пустым")
    @Column(name = "description")
    private String description;
 
+   @NotNull(message = "не должно быть пустым")
    @ManyToOne
    @JoinColumn(name = "organisation_id", referencedColumnName = "organisation_id")
    private Organisation organisation;
 
+   @Min(value = 0, message = "не может быть отрицательным")
    @Column(name = "coast")
    private float coast;
 
+   @Min(value = 0, message = "не может быть отрицательным")
    @Column(name = "count")
    private int count;
 

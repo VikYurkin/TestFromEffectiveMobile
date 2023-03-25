@@ -19,6 +19,7 @@ import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.repositories.*;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
 
 import java.util.*;
 
@@ -63,19 +64,16 @@ public class UserServiceImpl implements UserService {
 
     public PurchaseDTO buyProduct(User user, ProductDTO productDTO){
         Product product = productService.findProductIsActive(productDTO);
-        PurchaseDTO purchaseDTO = null;
-        Date date = null;
-        if(userAndProductOrNot(user, product))
-            return null;
 
         float balance = user.getBalance();
         float coast = product.getCoast();
         int countOfShop = product.getCount();
 
         if((balance<product.getCoast())|(countOfShop<0))
-            return null;
+            throw new CustomNotCreatedException("недостаточно средств для покупки");
+
         Purchases purchases =purchasesRepository.findByUserAndProduct(user, product);
-        date=new Date();
+        Date date=new Date();
         if(purchases==null){
             Purchases newPurchases = new Purchases(product, user, 1);
             List<DatesPurchases> listDate = new  ArrayList<>();
@@ -89,37 +87,32 @@ public class UserServiceImpl implements UserService {
         product.setCount(countOfShop-1);
         user.setBalance(balance-coast);
 
-        if(date!=null){
-            purchaseDTO = new PurchaseDTO(productDTO, date);
-            getMoney(product);
-        }
-       return purchaseDTO;
+        PurchaseDTO purchaseDTO = new PurchaseDTO(productDTO, date);
+        getMoney(product);
+        return purchaseDTO;
     }
-
 
     public ReviewDTO setReview(User user, ReviewDTO reviewDTO) {
         Product product = productService.findProductIsActive(reviewDTO.getProduct());
         String text = reviewDTO.getReview();
-        if(userAndProductOrNot(user, product))
-            return null;
 
         Purchases purchases = purchasesRepository.findByUserAndProduct(user, product);
 
         if(purchases==null)
-            return null;
+            throw new CustomNotCreatedException("нельзя оставить комментарий не купив товар");
 
         reviewRepository.save(new Review(product, user.getUserId(), text));
         return new ReviewDTO(reviewDTO.getProduct(), text);
     }
+
     public RatingWithDoubleDTO setRating(User user, RatingDTO ratingDTO){
         Product product = productService.findProductIsActive(ratingDTO.getProduct());
         int rating = ratingDTO.getRating();
-        if(userAndProductOrNot(user, product) |rating<0|rating>5)
-            return null;
+
         Purchases purchases = purchasesRepository.findByUserAndProduct(user, product);
 
         if (purchases == null)
-            return null;
+            throw new CustomNotCreatedException("нельзя поставить оценку не купив товар");
 
         Optional<Rating> newRating=product.getRating().stream().filter
                 (ratings -> ratings.getUserId()==user.getUserId()).findAny();
@@ -128,23 +121,18 @@ public class UserServiceImpl implements UserService {
             else
                 ratingRepository.save(new Rating(product, rating, user.getUserId()));
 
-            Double doubleRating;
-            doubleRating=product.getRating().stream()
+        Double doubleRating=product.getRating().stream()
                     .mapToInt(Rating::getRating).average().getAsDouble();
-        if(doubleRating != null)
-            return new RatingWithDoubleDTO(ratingDTO.getProduct(), doubleRating);
-        return null;
-        }
+        return new RatingWithDoubleDTO(ratingDTO.getProduct(), doubleRating);
+    }
 
-        public boolean returnProduct(PurchaseDTO purchaseDTO, User user){
+        public void returnProduct(PurchaseDTO purchaseDTO, User user){
             Product product = productService.findProductIsActive(purchaseDTO.getProduct());
-            if(userAndProductOrNot(user, product))
-                return false;
 
             Purchases purchases =purchasesRepository.findByUserAndProduct(user, product);
 
             if(purchases==null)
-                return false;
+                throw new CustomNotCreatedException("в Вашем журнале покупок отсутствует этот товар");
 
             long date=purchaseDTO.getDate().getTime();
             for(DatesPurchases dateOnDB:purchases.getDates()){
@@ -161,11 +149,12 @@ public class UserServiceImpl implements UserService {
                        User salesman = product.getOrganisation().getUser();
                        salesman.setBalance(salesman.getBalance()-(1-COMMISSION)*product.getCoast());
                        userRepository.save(user);
-                       return true;
+                       return;
                    }
                 }
             }
-            return false;
+            throw new CustomNotCreatedException("товар вернуть не удалось: либо данная дата отсутствует в журнале покупок," +
+                    " либо прошло более 3 дней с даты покупки");
         }
 
 
@@ -177,15 +166,13 @@ public class UserServiceImpl implements UserService {
     public User save(User user){
         return userRepository.save(user);
     }
+    public Optional<User> findByEmail(String email){
+    return userRepository.findByEmail(email);
+    }
 
     public void getMoney(Product product){
         User salesman =product.getOrganisation().getUser();
         salesman.setBalance(salesman.getBalance()+product.getCoast()*(1-COMMISSION));
         save(salesman);
-    }
-    private boolean userAndProductOrNot(User user, Product product){
-        Optional<User> userOrNot=userRepository.findById(user.getUserId());
-        Optional<Product> productOrNot=productRepository.findById(product.getProductId());
-        return (!(userOrNot.isPresent() & productOrNot.isPresent()));
     }
 }

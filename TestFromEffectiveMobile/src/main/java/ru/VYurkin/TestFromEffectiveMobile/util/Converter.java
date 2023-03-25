@@ -2,6 +2,8 @@ package ru.VYurkin.TestFromEffectiveMobile.util;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import ru.VYurkin.TestFromEffectiveMobile.dto.InfoSaleDTO.InfoSaleDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.InfoSaleDTO.InfoSaleForAdminDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.OrganisationDTO.OrganisationDTO;
@@ -165,4 +167,16 @@ public class Converter {
         return modelMapper.map(userDTO, User.class);
     }
 
+    public void validate(BindingResult bindingResult){
+        if(bindingResult.hasErrors()){
+            StringBuilder errorMsg = new StringBuilder();
+            List<FieldError> errors =  bindingResult.getFieldErrors();
+            for(FieldError error:errors){
+                errorMsg.append(error.getField())
+                        .append(" - ").append(error.getDefaultMessage())
+                        .append("; ");
+            }
+            throw new CustomNotCreatedException(errorMsg.toString());
+        }
+    }
 }

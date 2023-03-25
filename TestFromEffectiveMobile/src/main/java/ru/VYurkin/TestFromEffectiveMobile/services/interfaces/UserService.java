@@ -9,6 +9,7 @@ import ru.VYurkin.TestFromEffectiveMobile.models.product.Product;
 import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface UserService {
    User findByUsername(String username);
@@ -16,8 +17,9 @@ public interface UserService {
    PurchaseDTO buyProduct(User user, ProductDTO productDTO);
    ReviewDTO setReview(User user, ReviewDTO reviewDTO);
    RatingWithDoubleDTO setRating(User user, RatingDTO ratingDTO);
-   boolean returnProduct(PurchaseDTO purchaseDTO, User user);
+   void returnProduct(PurchaseDTO purchaseDTO, User user);
    List<User> findAdmin();
+   Optional<User> findByEmail(String email);
    void getMoney(Product product);
 
 }

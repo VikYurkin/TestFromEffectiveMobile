@@ -1,30 +1,35 @@
 package ru.VYurkin.TestFromEffectiveMobile.controllers;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.VYurkin.TestFromEffectiveMobile.dto.ProductDTO.ProductWithOrganisationNameDTO;
-import ru.VYurkin.TestFromEffectiveMobile.models.Organisation;
 import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.security.UsersDetails;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.OrganisationService;
+import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomErrorResponse;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
 
 import java.io.IOException;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/organisation")
 public class OrganisationController{
     private final OrganisationService organisationService;
+    private final Converter converter;
 
     @Autowired
-    public OrganisationController(OrganisationService organisationService) {
+    public OrganisationController(OrganisationService organisationService, Converter converter) {
         this.organisationService = organisationService;
+        this.converter = converter;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -38,22 +43,27 @@ public class OrganisationController{
     }
 
     @GetMapping(value = "/file", produces = MediaType.IMAGE_JPEG_VALUE)
-    public @ResponseBody byte[] getTableImageFile(@RequestParam("name") String organisationName) throws IOException {
-        Optional<Organisation> organisation = organisationService.findByNameIsActive(organisationName);
-        if(organisation.isPresent())
-            return organisationService.responseFile(organisation.get().getLogo());
-        else
-            return null;
+    public @ResponseBody byte[] getTableImageFile(@RequestParam("name") String name) throws IOException {
+        return organisationService.responseFile(name);
     }
 
     @PostMapping("/addproduct")
-    public ResponseEntity<HttpStatus> addProduct(@RequestBody ProductWithOrganisationNameDTO productWithOrganisationNameDTO) {
+    public ResponseEntity<HttpStatus> addProduct(@RequestBody @Valid ProductWithOrganisationNameDTO productWithOrganisationNameDTO,
+                                                 BindingResult bindingResult) {
+        converter.validate(bindingResult);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = ((UsersDetails) authentication.getPrincipal()).user();
-        if (organisationService.addProduct(productWithOrganisationNameDTO, user) != null) {
-            return ResponseEntity.ok(HttpStatus.OK);
-        } else
-            return ResponseEntity.of(Optional.of(HttpStatus.BAD_REQUEST));
+        organisationService.addProduct(productWithOrganisationNameDTO, user);
+        return ResponseEntity.ok(HttpStatus.OK);
+    }
+
+    @ExceptionHandler
+    private ResponseEntity<CustomErrorResponse> handleException(CustomNotCreatedException e){
+        CustomErrorResponse response = new CustomErrorResponse(
+                e.getMessage(),
+                System.currentTimeMillis()
+        );
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 }
 

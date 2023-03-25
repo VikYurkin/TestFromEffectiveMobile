@@ -1,9 +1,12 @@
 package ru.VYurkin.TestFromEffectiveMobile.controllers;
 
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import ru.VYurkin.TestFromEffectiveMobile.dto.ProductDTO.ProductDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.ProductDTO.ProductsDTO;
@@ -13,12 +16,14 @@ import ru.VYurkin.TestFromEffectiveMobile.dto.RatingDTO.RatingDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.RatingDTO.RatingWithDoubleDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.ReviewDTO.ReviewDTO;
 import ru.VYurkin.TestFromEffectiveMobile.dto.notificationDTO.NotificationsDTO;
-import ru.VYurkin.TestFromEffectiveMobile.models.product.Product;
 import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.security.UsersDetails;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
 import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomErrorResponse;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
+import ru.VYurkin.TestFromEffectiveMobile.util.Validator.ProductDTOExistValidator;
 
 import java.util.*;
 
@@ -32,11 +37,13 @@ public class PurchasesController {
 
 
     private final Converter converter;
+    private final ProductDTOExistValidator productDTOExistValidator;
 
-    public PurchasesController(ProductService productService, UserService userService,  Converter converter) {
+    public PurchasesController(ProductService productService, UserService userService, Converter converter, ProductDTOExistValidator productDTOExistValidator) {
         this.productService = productService;
         this.userService = userService;
         this.converter = converter;
+        this.productDTOExistValidator = productDTOExistValidator;
     }
 
     @GetMapping("/productall")
@@ -45,21 +52,27 @@ public class PurchasesController {
     }
 
     @PostMapping("/newpurchase")
-    public @ResponseBody PurchaseDTO newPurchase(@RequestBody ProductDTO productDTO ) {
+    public @ResponseBody PurchaseDTO newPurchase(@RequestBody @Valid ProductDTO productDTO, BindingResult bindingResult ) {
+        productDTOExistValidator.validate(productDTO, bindingResult);
+        converter.validate(bindingResult);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = ((UsersDetails) authentication.getPrincipal()).user();
         return userService.buyProduct(user, productDTO);
     }
 
     @PostMapping("/newreview")
-    public @ResponseBody ReviewDTO newReview(@RequestBody ReviewDTO reviewDTO){
+    public @ResponseBody ReviewDTO newReview(@RequestBody @Valid ReviewDTO reviewDTO, BindingResult bindingResult){
+        productDTOExistValidator.validate(reviewDTO.getProduct(), bindingResult, true);
+        converter.validate(bindingResult);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = ((UsersDetails) authentication.getPrincipal()).user();
         return userService.setReview(user, reviewDTO);
     }
 
     @PostMapping("/newrating")
-    public @ResponseBody RatingWithDoubleDTO newRating(@RequestBody RatingDTO ratingDTO){
+    public @ResponseBody RatingWithDoubleDTO newRating(@RequestBody @Valid RatingDTO ratingDTO, BindingResult bindingResult){
+        productDTOExistValidator.validate(ratingDTO.getProduct(), bindingResult, true);
+        converter.validate(bindingResult);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = ((UsersDetails) authentication.getPrincipal()).user();
         return userService.setRating(user, ratingDTO);
@@ -74,14 +87,13 @@ public class PurchasesController {
     }
 
     @PostMapping ("/returnproduct")
-    public ResponseEntity<HttpStatus> returnProduct(@RequestBody PurchaseDTO purchaseDTO){
+    public ResponseEntity<HttpStatus> returnProduct(@RequestBody @Valid PurchaseDTO purchaseDTO, BindingResult bindingResult){
+        productDTOExistValidator.validate(purchaseDTO.getProduct(), bindingResult, true);
+        converter.validate(bindingResult);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = ((UsersDetails) authentication.getPrincipal()).user();
-        boolean result =userService.returnProduct(purchaseDTO, user);
-        if(result){
-            return ResponseEntity.ok(HttpStatus.OK);
-       }
-       return ResponseEntity.of(Optional.of(HttpStatus.BAD_REQUEST));
+        userService.returnProduct(purchaseDTO, user);
+        return ResponseEntity.ok(HttpStatus.OK);
     }
 
     @GetMapping ("/notification")
@@ -92,4 +104,12 @@ public class PurchasesController {
         return new NotificationsDTO(converter.convertToNotificationDTO(user.getNotifications()));
     }
 
+    @ExceptionHandler
+    private ResponseEntity<CustomErrorResponse> handleException(CustomNotCreatedException e){
+        CustomErrorResponse response = new CustomErrorResponse(
+                e.getMessage(),
+                System.currentTimeMillis()
+        );
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
 }

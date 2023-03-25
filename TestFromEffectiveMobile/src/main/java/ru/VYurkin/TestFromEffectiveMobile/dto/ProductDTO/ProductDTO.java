@@ -1,5 +1,7 @@
 package ru.VYurkin.TestFromEffectiveMobile.dto.ProductDTO;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,15 +16,15 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProductDTO {
-
+    @NotNull(message = "не должно быть пустым")
     private String productName;
-
+    @NotNull(message = "не должно быть пустым")
     private String description;
-
+    @NotNull(message = "не должно быть пустым")
     private OrganisationDTO organisation;
-
+    @Min(value = 0, message = "не может быть отрицательным")
     private float coast;
-
+    @Min(value = 0, message = "не может быть отрицательным")
     private int count;
 
     private InfoSaleDTO infoSale;

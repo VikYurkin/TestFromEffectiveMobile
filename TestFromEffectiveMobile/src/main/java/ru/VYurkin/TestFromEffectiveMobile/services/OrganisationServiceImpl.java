@@ -1,8 +1,6 @@
 package ru.VYurkin.TestFromEffectiveMobile.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ru.VYurkin.TestFromEffectiveMobile.dto.OrganisationDTO.OrganisationDTO;
@@ -14,8 +12,10 @@ import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.repositories.OrganisationRepository;
 import ru.VYurkin.TestFromEffectiveMobile.repositories.ProductRepository;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.OrganisationService;
+import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
 import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,44 +31,56 @@ public class OrganisationServiceImpl implements OrganisationService {
     private final UserService userService;
     private final Converter converter;
     private final ProductRepository productRepository;
+    private final ProductService productService;
 
     @Autowired
-    public OrganisationServiceImpl(OrganisationRepository organisationRepository, NotificationService notificationService, UserService userService, Converter converter, ProductRepository productRepository) {
+    public OrganisationServiceImpl(OrganisationRepository organisationRepository, NotificationService notificationService, UserService userService, Converter converter, ProductRepository productRepository, ProductService productService) {
         this.organisationRepository = organisationRepository;
         this.notificationService = notificationService;
         this.userService = userService;
         this.converter = converter;
         this.productRepository = productRepository;
+        this.productService = productService;
     }
 
-    public byte[] responseFile(String logo) throws IOException {
-        byte[] array=null;
-        String filePath=getFileDirectory()+logo;
-            array = Files.readAllBytes(Paths.get(filePath));
-        return array;
+    public byte[] responseFile(String name) throws IOException {
+        Optional<Organisation> organisation = findByNameIsActive(name);
+        if(organisation.isPresent()){
+            String filePath=getFileDirectory()+organisation.get().getLogo();
+            return Files.readAllBytes(Paths.get(filePath));
+        }
+        else
+            throw new CustomNotCreatedException("организация с таким именем не зарегистрирована или заморожена");
     }
 
     public Optional<Organisation> findByNameIsActive(String name){
         return organisationRepository.findByNameAndIsActive(name, true);
     }
     public void newOrganisation(String name, String description, MultipartFile logo, User user){
+        if(organisationRepository.findByName(name).isPresent())
+            throw new CustomNotCreatedException("организация с таким именем уже зарегистрирована");
+        if(description==null)
+            throw new CustomNotCreatedException("описание организации не должно быть пустым");
+        else if (description.isEmpty())
+            throw new CustomNotCreatedException("описание организации не должно быть пустым");
+
         OrganisationDTO organisationDTO = new OrganisationDTO(name, description);
         Organisation organisation = converter.convertToOrganisation(organisationDTO, user);
         organisation.setLogo(createFile(logo));
         notificationForAdmin("Create organisation", String.format("I ask you to approve my organization %s.", organisation.getName()));
     }
 
-    public Product addProduct(ProductWithOrganisationNameDTO productWithOrganisationNameDTO, User user){
+    public void addProduct(ProductWithOrganisationNameDTO productWithOrganisationNameDTO, User user){
         Optional<Organisation> organisation = findByNameIsActive(productWithOrganisationNameDTO.getName());
-        if(organisation.isPresent()|user==null){
-            return null;}
+        if(organisation.isEmpty())
+            throw new CustomNotCreatedException("организация с таким именем не зарегистрирована или заморожена");
         if(!(organisation.get().getUser().getUserId()==user.getUserId()))
-            return null;
+            throw new CustomNotCreatedException("Вы не являетесь владельцем данной организации и не можете добавлять товары от ее лица");
+        if(productService.findProductIsActive(productWithOrganisationNameDTO.getProduct())!=null)
+            throw new CustomNotCreatedException("Такой товар уже зарегистрирован");
         Product product = productRepository.save(converter.converterToProduct(productWithOrganisationNameDTO.getProduct(), organisation.get()));
-        if (product != null) {
-            notificationForAdmin("Create product",
-                    String.format("I ask you to approve my product (productId = %s).", product.getProductId()));}
-        return product;
+        notificationForAdmin("Create product",
+                String.format("I ask you to approve my product (productId = %s).", product.getProductId()));
     }
     private String getFileDirectory(){
         Properties p = System.getProperties();
@@ -102,6 +114,8 @@ public class OrganisationServiceImpl implements OrganisationService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }else{
+            throw new CustomNotCreatedException("приложите логотип организации");
         }
         return resultFilename.toString();
     }
