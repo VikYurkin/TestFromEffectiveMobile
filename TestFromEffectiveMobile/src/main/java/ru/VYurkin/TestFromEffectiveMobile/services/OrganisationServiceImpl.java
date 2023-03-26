@@ -15,7 +15,7 @@ import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.OrganisationServic
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
 import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
-import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomException;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class OrganisationServiceImpl implements OrganisationService {
             return Files.readAllBytes(Paths.get(filePath));
         }
         else
-            throw new CustomNotCreatedException("организация с таким именем не зарегистрирована или заморожена");
+            throw new CustomException("организация с таким именем не зарегистрирована или заморожена");
     }
 
     public Optional<Organisation> findByNameIsActive(String name){
@@ -58,11 +58,11 @@ public class OrganisationServiceImpl implements OrganisationService {
     }
     public void newOrganisation(String name, String description, MultipartFile logo, User user){
         if(organisationRepository.findByName(name).isPresent())
-            throw new CustomNotCreatedException("организация с таким именем уже зарегистрирована");
+            throw new CustomException("организация с таким именем уже зарегистрирована");
         if(description==null)
-            throw new CustomNotCreatedException("описание организации не должно быть пустым");
+            throw new CustomException("описание организации не должно быть пустым");
         else if (description.isEmpty())
-            throw new CustomNotCreatedException("описание организации не должно быть пустым");
+            throw new CustomException("описание организации не должно быть пустым");
 
         OrganisationDTO organisationDTO = new OrganisationDTO(name, description);
         Organisation organisation = converter.convertToOrganisation(organisationDTO, user);
@@ -73,11 +73,11 @@ public class OrganisationServiceImpl implements OrganisationService {
     public void addProduct(ProductWithOrganisationNameDTO productWithOrganisationNameDTO, User user){
         Optional<Organisation> organisation = findByNameIsActive(productWithOrganisationNameDTO.getName());
         if(organisation.isEmpty())
-            throw new CustomNotCreatedException("организация с таким именем не зарегистрирована или заморожена");
+            throw new CustomException("организация с таким именем не зарегистрирована или заморожена");
         if(!(organisation.get().getUser().getUserId()==user.getUserId()))
-            throw new CustomNotCreatedException("Вы не являетесь владельцем данной организации и не можете добавлять товары от ее лица");
+            throw new CustomException("Вы не являетесь владельцем данной организации и не можете добавлять товары от ее лица");
         if(productService.findProductIsActive(productWithOrganisationNameDTO.getProduct())!=null)
-            throw new CustomNotCreatedException("Такой товар уже зарегистрирован");
+            throw new CustomException("Такой товар уже зарегистрирован");
         Product product = productRepository.save(converter.converterToProduct(productWithOrganisationNameDTO.getProduct(), organisation.get()));
         notificationForAdmin("Create product",
                 String.format("I ask you to approve my product (productId = %s).", product.getProductId()));
@@ -115,7 +115,7 @@ public class OrganisationServiceImpl implements OrganisationService {
                 throw new RuntimeException(e);
             }
         }else{
-            throw new CustomNotCreatedException("приложите логотип организации");
+            throw new CustomException("приложите логотип организации");
         }
         return resultFilename.toString();
     }

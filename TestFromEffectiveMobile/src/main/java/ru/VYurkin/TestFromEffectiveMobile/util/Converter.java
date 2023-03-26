@@ -176,7 +176,7 @@ public class Converter {
                         .append(" - ").append(error.getDefaultMessage())
                         .append("; ");
             }
-            throw new CustomNotCreatedException(errorMsg.toString());
+            throw new CustomException(errorMsg.toString());
         }
     }
 }

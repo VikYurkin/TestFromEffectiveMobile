@@ -19,7 +19,7 @@ import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.repositories.*;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
-import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
+import ru.VYurkin.TestFromEffectiveMobile.util.CustomException;
 
 import java.util.*;
 
@@ -70,7 +70,7 @@ public class UserServiceImpl implements UserService {
         int countOfShop = product.getCount();
 
         if((balance<product.getCoast())|(countOfShop<0))
-            throw new CustomNotCreatedException("недостаточно средств для покупки");
+            throw new CustomException("недостаточно средств для покупки");
 
         Purchases purchases =purchasesRepository.findByUserAndProduct(user, product);
         Date date=new Date();
@@ -99,7 +99,7 @@ public class UserServiceImpl implements UserService {
         Purchases purchases = purchasesRepository.findByUserAndProduct(user, product);
 
         if(purchases==null)
-            throw new CustomNotCreatedException("нельзя оставить комментарий не купив товар");
+            throw new CustomException("нельзя оставить комментарий не купив товар");
 
         reviewRepository.save(new Review(product, user.getUserId(), text));
         return new ReviewDTO(reviewDTO.getProduct(), text);
@@ -112,7 +112,7 @@ public class UserServiceImpl implements UserService {
         Purchases purchases = purchasesRepository.findByUserAndProduct(user, product);
 
         if (purchases == null)
-            throw new CustomNotCreatedException("нельзя поставить оценку не купив товар");
+            throw new CustomException("нельзя поставить оценку не купив товар");
 
         Optional<Rating> newRating=product.getRating().stream().filter
                 (ratings -> ratings.getUserId()==user.getUserId()).findAny();
@@ -132,7 +132,7 @@ public class UserServiceImpl implements UserService {
             Purchases purchases =purchasesRepository.findByUserAndProduct(user, product);
 
             if(purchases==null)
-                throw new CustomNotCreatedException("в Вашем журнале покупок отсутствует этот товар");
+                throw new CustomException("в Вашем журнале покупок отсутствует этот товар");
 
             long date=purchaseDTO.getDate().getTime();
             for(DatesPurchases dateOnDB:purchases.getDates()){
@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService {
                    }
                 }
             }
-            throw new CustomNotCreatedException("товар вернуть не удалось: либо данная дата отсутствует в журнале покупок," +
+            throw new CustomException("товар вернуть не удалось: либо данная дата отсутствует в журнале покупок," +
                     " либо прошло более 3 дней с даты покупки");
         }
 

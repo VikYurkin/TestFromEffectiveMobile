@@ -21,8 +21,6 @@ import ru.VYurkin.TestFromEffectiveMobile.security.UsersDetails;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.ProductService;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.UserService;
 import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
-import ru.VYurkin.TestFromEffectiveMobile.util.CustomErrorResponse;
-import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
 import ru.VYurkin.TestFromEffectiveMobile.util.Validator.ProductDTOExistValidator;
 
 import java.util.*;
@@ -104,12 +102,4 @@ public class PurchasesController {
         return new NotificationsDTO(converter.convertToNotificationDTO(user.getNotifications()));
     }
 
-    @ExceptionHandler
-    private ResponseEntity<CustomErrorResponse> handleException(CustomNotCreatedException e){
-        CustomErrorResponse response = new CustomErrorResponse(
-                e.getMessage(),
-                System.currentTimeMillis()
-        );
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
 }

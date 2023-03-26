@@ -67,12 +67,5 @@ public class RegistrationController {
         String token = jwtUtil.generateToken(authenticationDTO.getUsername());
         return Map.of("jvt-token", token);
     }
-    @ExceptionHandler
-    private ResponseEntity<CustomErrorResponse> handleException(CustomNotCreatedException e){
-        CustomErrorResponse response = new CustomErrorResponse(
-                e.getMessage(),
-                System.currentTimeMillis()
-        );
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
+
 }

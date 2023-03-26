@@ -15,8 +15,6 @@ import ru.VYurkin.TestFromEffectiveMobile.models.user.User;
 import ru.VYurkin.TestFromEffectiveMobile.security.UsersDetails;
 import ru.VYurkin.TestFromEffectiveMobile.services.interfaces.OrganisationService;
 import ru.VYurkin.TestFromEffectiveMobile.util.Converter;
-import ru.VYurkin.TestFromEffectiveMobile.util.CustomErrorResponse;
-import ru.VYurkin.TestFromEffectiveMobile.util.CustomNotCreatedException;
 
 import java.io.IOException;
 
@@ -57,14 +55,6 @@ public class OrganisationController{
         return ResponseEntity.ok(HttpStatus.OK);
     }
 
-    @ExceptionHandler
-    private ResponseEntity<CustomErrorResponse> handleException(CustomNotCreatedException e){
-        CustomErrorResponse response = new CustomErrorResponse(
-                e.getMessage(),
-                System.currentTimeMillis()
-        );
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
 }
 
 

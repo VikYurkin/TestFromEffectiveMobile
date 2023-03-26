@@ -19,9 +19,9 @@ import java.io.IOException;
 @Component
 public class JWTFilter extends OncePerRequestFilter {
 
-    private JWTUtil jwtUtil;
+    private final JWTUtil jwtUtil;
 
-    private UsersDetailsService usersDetailsService;
+    private final UsersDetailsService usersDetailsService;
 
     @Autowired
     public JWTFilter(JWTUtil jwtUtil, UsersDetailsService usersDetailsService) {
@@ -54,7 +54,6 @@ public class JWTFilter extends OncePerRequestFilter {
                 }
             }
         }
-
     filterChain.doFilter(request,response);
     }
 

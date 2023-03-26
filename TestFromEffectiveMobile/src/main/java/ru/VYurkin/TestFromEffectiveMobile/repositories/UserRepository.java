@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
-    Optional<User> findByPassword(String password);
     @Query(value = "select * from users join user_role ur on users.user_id = ur.role_id where role = :role ", nativeQuery = true)
     List<User> findByRole(@Param("role") String role);
+
     }
