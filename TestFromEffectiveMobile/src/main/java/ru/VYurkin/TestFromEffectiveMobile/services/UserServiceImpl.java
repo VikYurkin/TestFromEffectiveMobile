@@ -27,7 +27,6 @@ import java.util.*;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final ProductRepository productRepository;
 
     private final PurchasesRepository purchasesRepository;
 
@@ -37,10 +36,9 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final ProductService productService;
     private static float COMMISSION = 0.05f;
-@Autowired
-    public UserServiceImpl(ProductRepository productRepository, UserRepository userRepository, PurchasesRepository purchasesRepository, DatesPurchasesRepository datesPurchasesRepository, ReviewRepository reviewRepository, RatingRepository ratingRepository, PasswordEncoder passwordEncoder, ProductService productService) {
+    @Autowired
+    public UserServiceImpl(UserRepository userRepository, PurchasesRepository purchasesRepository, DatesPurchasesRepository datesPurchasesRepository, ReviewRepository reviewRepository, RatingRepository ratingRepository, PasswordEncoder passwordEncoder, ProductService productService) {
         this.userRepository = userRepository;
-        this.productRepository = productRepository;
         this.purchasesRepository = purchasesRepository;
         this.datesPurchasesRepository = datesPurchasesRepository;
         this.reviewRepository = reviewRepository;
